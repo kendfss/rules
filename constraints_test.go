@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package constraints
+package rules
 
 import (
 	"bytes"
@@ -19,7 +19,9 @@ type (
 	testUnsigned[T Unsigned] struct{ f T }
 	testInteger[T Integer]   struct{ f T }
 	testFloat[T Float]       struct{ f T }
+	testReal[T Real]         struct{ f T }
 	testComplex[T Complex]   struct{ f T }
+	testNumber[T Number]     struct{ f T }
 	testOrdered[T Ordered]   struct{ f T }
 )
 
@@ -32,25 +34,33 @@ type TestTypes struct {
 	_ testInteger[int8]
 	_ testInteger[uint8]
 	_ testInteger[uintptr]
+	_ testReal[float32]
+	_ testReal[float64]
 	_ testFloat[float32]
 	_ testComplex[complex64]
+	_ testNumber[int]
+	_ testNumber[float32]
+	_ testNumber[complex128]
 	_ testOrdered[int]
 	_ testOrdered[float64]
 	_ testOrdered[string]
 }
 
 var prolog = []byte(`
-package constrainttest
+package ruletest
 
-import "golang.org/x/exp/constraints"
+// import "golang.org/x/exp/rules"
+import "github.com/kendfss/rules"
 
 type (
-	testSigned[T constraints.Signed]     struct{ f T }
-	testUnsigned[T constraints.Unsigned] struct{ f T }
-	testInteger[T constraints.Integer]   struct{ f T }
-	testFloat[T constraints.Float]       struct{ f T }
-	testComplex[T constraints.Complex]   struct{ f T }
-	testOrdered[T constraints.Ordered]   struct{ f T }
+	testSigned[T rules.Signed]     struct{ f T }
+	testUnsigned[T rules.Unsigned] struct{ f T }
+	testInteger[T rules.Integer]   struct{ f T }
+	testFloat[T rules.Float]       struct{ f T }
+	testReal[T rules.Real]         struct{ f T }
+	testComplex[T rules.Complex]   struct{ f T }
+	testNumber[T rules.Number]     struct{ f T }
+	testOrdered[T rules.Ordered]   struct{ f T }
 )
 `)
 
@@ -75,25 +85,26 @@ func TestFailure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// This package is golang.org/x/exp/constraints, so the root of the x/exp
+	// This package is golang.org/x/exp/rules, so the root of the x/exp
 	// module is the parent directory of the directory in which this test runs.
 	expModDir := filepath.Dir(cwd)
 
-	modFile := fmt.Sprintf(`module constraintest
+	modFile := fmt.Sprintf(`module ruleest
 
 go 1.18
 
-replace golang.org/x/exp => %s
-`, expModDir)
-	if err := os.WriteFile(filepath.Join(tmpdir, "go.mod"), []byte(modFile), 0666); err != nil {
+// replace golang.org/x/exp => %s
+replace github.com/kendfss => %s
+`, expModDir, expModDir)
+	if err := os.WriteFile(filepath.Join(tmpdir, "go.mod"), []byte(modFile), 0o666); err != nil {
 		t.Fatal(err)
 	}
 
 	// Write the prolog as its own file so that 'go mod tidy' has something to inspect.
 	// This will ensure that the go.mod and go.sum files include any dependencies
-	// needed by the constraints package (which should just be some version of
+	// needed by the rules package (which should just be some version of
 	// x/exp itself).
-	if err := os.WriteFile(filepath.Join(tmpdir, "prolog.go"), []byte(prolog), 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpdir, "prolog.go"), []byte(prolog), 0o666); err != nil {
 		t.Fatal(err)
 	}
 
@@ -106,16 +117,16 @@ replace golang.org/x/exp => %s
 		t.Logf("%v:\n%s", tidyCmd, out)
 	}
 
-	// Test for types that should not satisfy a constraint.
-	// For each pair of constraint and type, write a Go file
-	//     var V constraint[type]
+	// Test for types that should not satisfy a rule.
+	// For each pair of rule and type, write a Go file
+	//     var V rule[type]
 	// For example,
 	//     var V testSigned[uint]
 	// This should not compile, as testSigned (above) uses
-	// constraints.Signed, and uint does not satisfy that constraint.
+	// rules.Signed, and uint does not satisfy that rule.
 	// Therefore, the build of that code should fail.
 	for i, test := range []struct {
-		constraint, typ string
+		rule, typ string
 	}{
 		{"testSigned", "uint"},
 		{"testUnsigned", "int"},
@@ -126,7 +137,7 @@ replace golang.org/x/exp => %s
 	} {
 		i := i
 		test := test
-		t.Run(fmt.Sprintf("%s %d", test.constraint, i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s %d", test.rule, i), func(t *testing.T) {
 			t.Parallel()
 			name := fmt.Sprintf("go%d.go", i)
 			f, err := os.Create(filepath.Join(tmpdir, name))
@@ -136,7 +147,7 @@ replace golang.org/x/exp => %s
 			if _, err := f.Write(prolog); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := fmt.Fprintf(f, "var V %s[%s]\n", test.constraint, test.typ); err != nil {
+			if _, err := fmt.Fprintf(f, "var V %s[%s]\n", test.rule, test.typ); err != nil {
 				t.Fatal(err)
 			}
 			if err := f.Close(); err != nil {

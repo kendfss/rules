@@ -1,58 +1,71 @@
-// Copyright 2021 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
-// Package constraints defines a set of useful constraints to be used
+// Package rules defines a set of useful constraints to be used
 // with type parameters.
-package constraints
+package rules
 
 // Signed is a constraint that permits any signed integer type.
-// If future releases of Go add new predeclared signed integer types,
-// this constraint will be modified to include them.
 type Signed interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64
 }
 
 // Unsigned is a constraint that permits any unsigned integer type.
-// If future releases of Go add new predeclared unsigned integer types,
-// this constraint will be modified to include them.
 type Unsigned interface {
 	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
 }
 
 // Integer is a constraint that permits any integer type.
-// If future releases of Go add new predeclared integer types,
-// this constraint will be modified to include them.
 type Integer interface {
 	Signed | Unsigned
 }
 
 // Float is a constraint that permits any floating-point type.
-// If future releases of Go add new predeclared floating-point types,
-// this constraint will be modified to include them.
 type Float interface {
 	~float32 | ~float64
 }
 
-// Complex is a constraint that permits any complex numeric type.
-// If future releases of Go add new predeclared complex numeric types,
-// this constraint will be modified to include them.
-type Complex interface {
-	~complex64 | ~complex128
-}
-
+// Real is a constraint that permits any non-complex numeric type.
 type Real interface {
 	Float | Integer
 }
 
+// Complex is a constraint that permits any complex numeric type.
+type Complex interface {
+	~complex64 | ~complex128
+}
+
+// Number is a constraint that permits any numeric type.
 type Number interface {
 	Complex | Real
 }
 
+type Negable interface {
+	Signed | Real | Complex
+}
+
 // Ordered is a constraint that permits any ordered type: any type
 // that supports the operators < <= >= >.
-// If future releases of Go add new ordered types,
-// this constraint will be modified to include them.
 type Ordered interface {
 	Real | ~string
 }
+
+// Raw is a constraint that permits numbers, strings, uintpointers and booleans
+type Raw interface {
+	Number | ~string | ~bool
+}
+
+// Lener is a constraint that permits any type passable
+// to the builtin len function
+type Lener[K comparable, T any] interface {
+	~string | ~[]T | ~map[K]T
+}
+
+// aliases
+type (
+	C   Complex
+	F   Float
+	I   Integer
+	Neg Negable
+	Num Number
+	R   Real
+	S   Signed
+	U   Unsigned
+)
