@@ -2,6 +2,11 @@
 // with type parameters.
 package rules
 
+// Char is a constraint that permits any character type.
+type Char interface {
+	~int32 | ~uint8
+}
+
 // Signed is a constraint that permits any signed integer type.
 type Signed interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64
@@ -58,7 +63,7 @@ type Lener[K comparable, T any] interface {
 	~string | ~[]T | ~map[K]T
 }
 
-// aliases
+// utility alias
 type (
 	C   Complex
 	F   Float
